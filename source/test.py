@@ -1,5 +1,9 @@
 import json
 import sys
+import csv
+import re
+
+#max_lenght = 102
 
 
 keywords = ['Enchant', 'Flying', 'Food', 'Adapt', 'Treasure', 'Reach', 'Equip', 'Connive', 'Enrage',
@@ -32,35 +36,34 @@ keywords = ['Enchant', 'Flying', 'Food', 'Adapt', 'Treasure', 'Reach', 'Equip', 
             'Forestcycling', 'Fortify', 'Transfigure', 'Assemble', 'Cloak', 'Plainswalk', 'Jump-start', 'Prowl',
             'Nonbasic landwalk', 'Sweep', 'Aura Swap', 'Gravestorm']
 
-'''
-print('[')
 
-text = ""
-            #print('\t\t{')
-            #print('\t\t{')
-            #print('\t\t{')
-            #print('\t\t\t\"mana_cost\":', '\"' + str(i.get('mana_cost'))+ '\",')
-            #print('\t\t\t\"cmc\":', '\"' + str(i.get('cmc')) + '\",')
-            #print('\t\t\t\"type_line\":', '\"' + i.get('type_line') + '\",')
-            #print('\t\t\t\"oracle_text\":', '\"' + text + '\",')
-            #print('\t\t\t\"colors\":', json.dumps(i.get('colors')), ',')
-            #print('\t\t\t\"reprint\":', '\"' + str(i.get('reprint')) + '\",')
-            #print('\t\t\t\"rarity\":', '\"' + i.get('rarity') + '\",')
-           #print('\t\t\t\"power\":', '\"' + str(i.get('power')) + '\",')
-            #print('\t\t\t\"toughness\":', '\"' + str(i.get('toughness')) + '\",')
-                 #print('\t\t\t\"prices\":', '\"L\"', '\n\t\t},')
-                        #print('\t\t\t\"prices\":', '\"M\"', '\n\t\t},')
-                        #print('\t\t\t\"prices\":', '\"H\"' '\n\t\t},')
-                        #print('\t\t\t\"prices\":', json.dumps(i.get('prices')), '\n\t\t},')
-    #print('\t]')
+def csv_creator( cardList ):
 
+    with open('../data/texts.csv', 'w', encoding='UTF8', newline='') as file:
+        header = ['text', 'label']
+        writer = csv.writer(file)
 
+        writer.writerow(header)
+        #max_length=0
+        data = []
+        words = []
+        for i in cardList:
+            text = i.get('oracle_text')
+            text = re.sub("\(.*?\)","()",text)
 
-'''
+            text = str(int(i.get('cmc'))) + "." + i.get('type_line') + "." + i.get('colors') + "." + i.get('rarity') + "." +\
+                   str(i.get('power')) + "." + str(i.get('toughness')) + "." + text
+            #if len(text.split()) > max_length:
+            #    max_length = len(text.split())
+            text = re.sub("[{}(),\"\'—[\]]","",text)
+            tmp= [ text , '']
+            data.append(tmp)
 
+        writer.writerows(data)
+    return True
 
-def retrievedata():
-    with open('oracle-cards-20240220220210.json') as json_file:
+def retrieve_data():
+    with open('../data/oracle-cards-20240220220210.json',encoding="utf8") as json_file:
         json_load = json.load(json_file)
 
     file = open('out.txt', 'w')
@@ -73,20 +76,44 @@ def retrievedata():
             card_info = dict({})
 
             card_info["name"] = i.get('name').replace('\"', '')
+
             card_info["cmc"] = i.get('cmc')
+
+
             card_info["type_line"] = i.get('type_line')
-            card_info["keywords"] = i.get('keywords')
+
             if i.get('oracle_text') is None:
                 text = "None"
             else:
                 text = i.get('oracle_text').replace('\n', '.')
                 text = text.replace('\"', '')
-            card_info["oracle_text"] = text
-            card_info["colors"] = i.get('colors')
-            card_info["reprints"] = i.get('reprint')
+                if i.get('name') in text:
+                    text.replace(i.get('name'), '')
+                card_info["oracle_text"] = text
+
+            if(i.get('colors')) == []:
+                card_info["colors"]=str(['N'])
+            else:
+                card_info["colors"] = str(i.get('colors'))
+
+
+            if i.get('reprints') is not None:
+                card_info["reprints"] = i.get('reprints')
+            else:
+                card_info["reprints"] = 'None'
+
             card_info["rarity"] = i.get('rarity')
-            card_info["power"] = i.get('power')
-            card_info["toughness"] = i.get('toughness')
+
+            if i.get('power') is None:
+                card_info["power"] = 'None'
+            else:
+                card_info["power"] = str(i.get('power'))
+
+            if i.get('toughness') is None:
+                card_info['toughness'] = 'None'
+            else:
+                card_info['toughness'] = str(i.get('toughness'))
+
             if i.get('prices').get('eur') is None or float(i.get('prices').get('eur')) < 1:
                 card_info["price"] = 'L'
             else:
@@ -101,13 +128,17 @@ def retrievedata():
     return all_cards
 
 
+
 if __name__ == '__main__':
 
-    cardList = retrievedata()
+    cardList = retrieve_data()
+
+
     name = ''
-    while name != '-e' :
+    while name != '-e':
         name = input("insert card name")
         for i in cardList:
             if i.get('name').lower() == name.lower():
                 print(i)
 
+    csv_creator( cardList )
